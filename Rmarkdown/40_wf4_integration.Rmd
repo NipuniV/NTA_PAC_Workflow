@@ -1,0 +1,242 @@
+---
+title: "Workflow 4 — Evidence integration"
+author: "Nipuni Vitharana"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: flatly
+    df_print: paged
+---
+
+
+```{r wf4-opts, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = FALSE)
+```
+
+```{r wf4-bootstrap, include=FALSE}
+# ---------------------------------------------------------------------------
+# Bootstrap for standalone knitting.
+#
+# When this document is knitted on its own, the configuration and helper
+# functions it depends on are not yet in memory. This chunk loads them by
+# extracting the R code out of the corresponding .Rmd files.
+#
+# When the document is knitted as a child of run_all.Rmd the objects already
+# exist, so this chunk does nothing.
+# ---------------------------------------------------------------------------
+source_rmd <- function(rmd_path) {
+  tmp <- tempfile(fileext = ".R")
+  knitr::purl(rmd_path, output = tmp, quiet = TRUE)
+  source(tmp, local = knitr::knit_global())
+  unlink(tmp)
+}
+
+if (!exists("sample_name")) {
+  source_rmd(here::here("Rmarkdown", "00_setup.Rmd"))
+  source_rmd(here::here("Rmarkdown", "01_helpers.Rmd"))
+}
+```
+
+
+**PURPOSE**
+
+  WF1, WF2 and WF3 each interrogate the same peak list from a different and
+  largely independent angle:
+
+```
+    WF1  spectral + retention match to an authentic standard
+    WF2  halogen isotope pattern (a physical constant of the nuclide)
+    WF3  heteroatom-diagnostic neutral losses and mass defect
+```
+
+  None of them is sufficient alone. WF2 is close to decisive within its scope
+  but says nothing about compounds that contain no halogen; WF3 is deliberately
+  high-recall and therefore low-precision; WF1 depends on the compound being
+  present in the in-house library at all.
+
+  WF4 combines them so that a reported identification rests on the CONVERGENCE
+  of independent evidence rather than on any single filter. This is what makes
+  the assignment defensible: the failure modes of the three workflows are
+  different, so agreement between them is meaningful.
+
+INPUT   data_wf4/<sample>_lib_pacs_2ion.csv   (WF1)
+```
+        data_wf4/<sample>_halo_pacs.csv       (WF2)
+        data_wf4/<sample>_hpacs.csv           (WF3)
+```
+OUTPUT  results_wf4/<sample>_final_PAC_report.csv
+```
+        results_final/<sample>_final_PAC_report.csv   (delivered copy)
+```
+
+```{r wf4-01}
+run_wf4 <- function(sample_name) {
+
+  message("\n=== WORKFLOW 4 : evidence integration ===")
+
+  p_lib  <- file.path(dir_data$wf4, paste0(sample_name, "_lib_pacs_2ion.csv"))
+  p_halo <- file.path(dir_data$wf4, paste0(sample_name, "_halo_pacs.csv"))
+  p_nso  <- file.path(dir_data$wf4, paste0(sample_name, "_hpacs.csv"))
+
+  # Any stream may legitimately be empty (e.g. a sample with no halogenated
+  # compounds). Missing inputs are substituted with correctly-typed empty
+  # tables so the joins still work and the report is still produced.
+  safe_read <- function(path, label) {
+    if (file.exists(path)) {
+      d <- clean_names(read_csv(path, show_col_types = FALSE))
+      message(sprintf("  %-22s : %d rows", label, nrow(d)))
+      d
+    } else {
+      message(sprintf("  %-22s : MISSING - treated as empty", label))
+      NULL
+    }
+  }
+
+  data_lib  <- safe_read(p_lib,  "WF1 library matches")
+  data_halo <- safe_read(p_halo, "WF2 halogenated PACs")
+  data_nso  <- safe_read(p_nso,  "WF3 heterocyclic PACs")
+
+  # ---- 4.1 Harmonise coordinates ------------------------------------------
+  # The three workflows name their retention-time and mass columns differently.
+  # They are renamed to a common vocabulary (t1 / t2 / base_val) so the peaks
+  # can be joined.
+  data_lib_clean <- if (!is.null(data_lib)) {
+    data_lib %>%
+      rename(t1 = t1_samp, t2 = t2_samp, base_val = base_mass) %>%
+      mutate(t1 = as.numeric(t1), t2 = as.numeric(t2)) %>%
+      select(name, t1, t2, acronyms, confidence, matched_ions, area, base_val)
+  } else {
+    tibble(name = character(), t1 = numeric(), t2 = numeric(),
+           acronyms = character(), confidence = character(),
+           matched_ions = character(), area = numeric(), base_val = numeric())
+  }
+
+  data_halo_clean <- if (!is.null(data_halo)) {
+    data_halo %>%
+      rename(t1 = rt1_s, t2 = rt2_s, base_val = base_peak) %>%
+      mutate(t1 = as.numeric(t1), t2 = as.numeric(t2)) %>%
+      select(name, t1, t2, halogen_class, possible_halo_pac, matched_formula,
+             detected_isotope_peaks, top2_non_isotope_peaks, base_val)
+  } else {
+    tibble(name = character(), t1 = numeric(), t2 = numeric(),
+           halogen_class = character(), possible_halo_pac = character(),
+           matched_formula = character(), detected_isotope_peaks = character(),
+           top2_non_isotope_peaks = character(), base_val = character())
+  }
+
+  data_nso_clean <- if (!is.null(data_nso)) {
+    d <- data_nso %>%
+      rename(t1 = x1st_dimension_time_s, t2 = x2nd_dimension_time_s,
+             base_val = base_mass) %>%
+      mutate(t1 = as.numeric(t1), t2 = as.numeric(t2))
+    # max_score is written by WF3 and records the maximum achievable score for
+    # whichever scoring scheme was active. Using it (rather than the largest
+    # value actually observed) keeps the WF3 bonus on a fixed scale, so results
+    # from different samples remain directly comparable.
+    if (!"max_score" %in% names(d)) d$max_score <- 8L
+    d %>% select(name, t1, t2, base_val, evidence_score, max_score,
+                 screening_tier, ref_compound, ref_formula, frag_evidence)
+  } else {
+    tibble(name = character(), t1 = numeric(), t2 = numeric(), base_val = numeric(),
+           evidence_score = numeric(), max_score = numeric(),
+           screening_tier = character(),
+           ref_compound = character(), ref_formula = character(),
+           frag_evidence = character())
+  }
+
+  # ---- 4.2 Join on peak identity ------------------------------------------
+  # full_join keeps peaks found by ANY workflow, including discoveries seen only
+  # by WF2 or WF3 with no library counterpart. coalesce() then fills the unified
+  # RT and base-mass columns from whichever stream supplied them.
+  combined_data <- data_lib_clean %>%
+    full_join(data_halo_clean, by = "name", suffix = c("_lib", "_halo")) %>%
+    full_join(data_nso_clean,  by = "name") %>%
+    mutate(
+      rt1 = coalesce(t1_lib, t1_halo, t1),
+      rt2 = coalesce(t2_lib, t2_halo, t2),
+      base_mass_peak = coalesce(as.character(base_val_lib),
+                                as.character(base_val_halo),
+                                as.character(base_val))
+    )
+
+  # ---- 4.3 Reliability scoring (0-10) -------------------------------------
+  # Library evidence dominates, because a match to an authentic standard on both
+  # spectrum and retention time is the strongest evidence available. Halogen and
+  # heteroatom evidence act as CORROBORATION, adding up to 2 points each.
+  #
+  # For peaks with no library hit at all (non-targeted discoveries) the same
+  # corroborating evidence is rescaled, so a compound supported by both WF2 and
+  # WF3 can still reach a high score without ever appearing in the library.
+  final_results <- combined_data %>%
+    mutate(
+      base_score = case_when(
+        str_detect(confidence, "Level 1") ~ 8.0,
+        str_detect(confidence, "Level 2") ~ 7.0,
+        str_detect(confidence, "Level 3") ~ 7.0,
+        TRUE                              ~ 0.0
+      ),
+      # WF3 contributes proportionally to its evidence score, capped at +2.
+      # Normalised by max_score (the scheme maximum) so the bonus does not
+      # depend on which peaks happen to be in this particular sample.
+      nso_bonus  = ifelse(!is.na(evidence_score) & !is.na(max_score) & max_score > 0,
+                          (evidence_score / max_score) * 2, 0.0),
+      # WF2 is near-binary: a valid isotope pattern is strong evidence
+      halo_bonus = ifelse(!is.na(halogen_class), 2.0, 0.0),
+
+      final_reliability = case_when(
+        base_score >  0 ~ pmin(base_score + nso_bonus + halo_bonus, 10.0),
+        base_score == 0 ~ (nso_bonus * 2.5) + (halo_bonus * 2.5)
+      ),
+
+      # Preferred identity, in order of evidence strength
+      primary_identity = case_when(
+        !is.na(acronyms)          ~ acronyms,
+        !is.na(possible_halo_pac) ~ possible_halo_pac,
+        !is.na(ref_compound)      ~ ref_compound,
+        TRUE                      ~ name
+      ),
+
+      # Which workflows support this peak - makes convergence explicit
+      evidence_sources = paste0(
+        ifelse(!is.na(acronyms),      "WF1 ", ""),
+        ifelse(!is.na(halogen_class), "WF2 ", ""),
+        ifelse(!is.na(evidence_score),"WF3", "")
+      ) %>% str_trim()
+    )
+
+  # ---- 4.4 Deduplicate and export -----------------------------------------
+  final_unique <- final_results %>%
+    group_by(name) %>%
+    slice_max(order_by = final_reliability, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    arrange(desc(final_reliability), name) %>%
+    select(name, primary_identity, final_reliability, evidence_sources,
+           rt1, rt2, base_mass_peak, area,
+           confidence, screening_tier, halogen_class,
+           matched_ions, detected_isotope_peaks, top2_non_isotope_peaks,
+           frag_evidence, matched_formula, ref_formula)
+
+  out_wf4   <- file.path(dir_res$wf4, paste0(sample_name, "_final_PAC_report.csv"))
+  out_final <- file.path(dir_final,   paste0(sample_name, "_final_PAC_report.csv"))
+  write_csv(final_unique, out_wf4)
+  write_csv(final_unique, out_final)
+
+  message(sprintf("  Integrated peaks : %d", nrow(final_unique)))
+  print(count(final_unique, evidence_sources, name = "n") %>% arrange(desc(n)))
+  message("  Saved: ", basename(out_wf4), "  and  results_final/", basename(out_final))
+
+  invisible(final_unique)
+}
+```
+
+## Run this stage
+
+The chunk below executes this stage. It runs only when this document is knitted
+on its own — when it is knitted as a child of `run_all.Rmd`, that document makes
+the call instead, so the stage is not run twice.
+
+```{r wf4-run, eval = !exists(".in_master")}
+wf4_out <- run_wf4(sample_name)
+```

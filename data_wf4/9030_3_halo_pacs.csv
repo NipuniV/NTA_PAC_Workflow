@@ -1,0 +1,2 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+Peak 268,1495,1.526,-7.73e-4,mono_Cl,Benz(a)acridine-Tri-Cl,C17Cl3H8N,M+4,4.77,"326.98056 (ri=1000), 328.97681 (ri=227)","283.05808 (ri=238), 399.02335 (ri=192)",326.98056 (ri=1000)

@@ -1,0 +1,7 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+"Cyclohexasiloxane, dodecamethyl-",1120,1.586,-5.87e-4,mono_Cl; poly_or_mixed,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,12.98,"341.01589 (ri=1000), 324.98532 (ri=482), 343.01383 (ri=199), 326.98271 (ri=100)","147.06539 (ri=579), 73.05247 (ri=505)",341.01589 (ri=1000)
+Peak 1686,1240,0.266,-5.81e-4,di_Cl; poly_or_mixed,Naphthalene-Di-Cl,C10Cl2H6,M+4,7.14,"189.99433 (ri=1000), 191.99142 (ri=671), 193.98906 (ri=112)","91.05426 (ri=339), 68.02579 (ri=294)",189.99433 (ri=1000)
+Peak 4036,2716,2.952,-0.004985,poly_or_mixed,Dibenzofuran-Di-Br,C12Br2H6O,M,8.46,"325.87356 (ri=1000), 323.87580 (ri=414)","255.93820 (ri=869), 327.87583 (ri=337)",325.87356 (ri=1000)
+Peak 4566,2851,2.751,-0.005965,mono_Br,Acenaphthylene-Tetra-Cl,C12Cl4H4,M,9.17,"361.83218 (ri=1000), 359.83488 (ri=988), 289.90110 (ri=831), 287.90407 (ri=671), 219.96367 (ri=281), 217.96659 (ri=199)","225.07317 (ri=672), 357.84226 (ri=584)",361.83218 (ri=1000)
+Peak 4575,2854,2.775,-0.005132,poly_or_mixed,Dibenzothiophene-Di-Cl-Mono-Br,C12BrCl2H5S,M+4,0.39,"325.87135 (ri=958), 327.87011 (ri=507)","323.87910 (ri=1000), 192.09117 (ri=589)",323.87910 (ri=1000)
+Peak 4589,2857,2.767,-0.002975,poly_or_mixed; mono_Cl,Acenaphthylene-Tri-Cl,C12Cl3H5,M,4.21,"253.94461 (ri=596), 255.94142 (ri=425), 257.93832 (ri=169)","327.88081 (ri=1000), 205.10049 (ri=846)",327.88081 (ri=1000)

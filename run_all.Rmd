@@ -1,0 +1,234 @@
+---
+title: "Non-Targeted Analysis of Polycyclic Aromatic Compounds"
+subtitle: "Complete pipeline — Workflows 1 to 4 and KMD confidence assessment"
+author: "Nipuni Vitharana"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+    number_sections: true
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r master-opts, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = FALSE)
+knitr::opts_knit$set(root.dir = here::here())
+
+# Marks this as the master document. Each child workflow checks for this flag
+# and skips its own run chunk, so no stage is executed twice.
+.in_master <- TRUE
+
+run_start <- Sys.time()
+```
+
+# How to use this document
+
+1. Put the ChromaTOF export (for example `YP1.csv`) into **`data_raw/`**.
+   It goes there **once** — Workflows 1, 2 and 3 all read the same file.
+2. Set the sample name near the top of `Rmarkdown/00_setup.Rmd`:
+
+   ```r
+   sample_name <- "YP1"
+   ```
+3. Knit this document (the **Knit** button in RStudio, or
+   `rmarkdown::render("run_all.Rmd")`).
+
+Knitting produces a single HTML report showing what every stage did — how many
+peaks entered, how many survived each filter, and what was written where. Any
+package that is not already installed is installed automatically by the setup
+stage, so the project runs on a clean machine without preparation.
+
+**Outputs**
+
+| File | Contents |
+|---|---|
+| `results_final/<sample>_final_PAC_report.csv` | Integrated WF4 report |
+| `kmd_final/standards_kmd_HCl.png` | H/Cl models, training data only (no sample) |
+| `kmd_final/standards_kmd_Br2.png` | Br₂ models, training data only (no sample) |
+| `kmd_final/standards_kmd_CH2.png` | CH₂ models, training data only (no sample) |
+| `kmd_final/<sample>_kmd_HCl.png` | H/Cl series KMD plot, this sample |
+| `kmd_final/<sample>_kmd_Br2.png` | Br₂ series KMD plot, this sample |
+| `kmd_final/<sample>_kmd_CH2.png` | CH₂ series KMD plot, this sample |
+
+Every intermediate file each workflow writes is retained in `results_wf1/` to
+`results_wf4/` so the route to any result can be traced.
+
+---
+
+# Structure of the pipeline
+
+Workflows 1, 2 and 3 are **independent**. Each interrogates the same peak list
+from a different angle, and none is sufficient alone. Only Workflow 4 depends on
+the other three.
+
+| | Question asked | Nature of the evidence |
+|---|---|---|
+| **WF1** | Does this peak match an authentic standard? | Spectral match + retention time |
+| **WF2** | Does this peak contain Cl or Br? | Isotope ratios — a physical constant |
+| **WF3** | Does this peak contain a ring N, S or O? | Diagnostic neutral losses, mass defect |
+| **WF4** | What do all three together support? | Convergence of independent evidence |
+
+Because the three workflows fail in different ways, agreement between them is
+meaningful — which is what makes a reported identification defensible.
+
+Each workflow below is a separate R Markdown document under `Rmarkdown/` and can
+be knitted, described and cited on its own. This document simply runs them in
+order and collects the output.
+
+---
+
+# Setup and configuration
+
+All tolerances, thresholds and file paths are defined here and nowhere else, so
+a parameter cannot drift out of sync between workflows.
+
+```{r load-setup, child = "Rmarkdown/00_setup.Rmd"}
+```
+
+# Shared helper functions
+
+Functions used by more than one workflow. Keeping them in one place guarantees
+that, for example, WF1 and WF3 reshape spectra identically, and that WF2 and the
+KMD stage compute Kendrick mass defects with identical constants.
+
+```{r load-helpers, child = "Rmarkdown/01_helpers.Rmd"}
+```
+
+# Reference library validation
+
+This runs **before any sample data is processed**. A wrong tabulated mass causes
+a compound to disappear silently rather than raise an error, so every reference
+table is checked by recomputing each compound's monoisotopic mass from its own
+molecular formula.
+
+```{r load-validate, child = "Rmarkdown/02_validate_libraries.Rmd"}
+```
+
+```{r run-validation}
+run_library_validation()
+```
+
+# Workflow 1 — Library matching
+
+```{r load-wf1, child = "Rmarkdown/10_wf1_library_match.Rmd"}
+```
+
+```{r run-wf1}
+wf1_out <- run_wf1(sample_name)
+```
+
+# Workflow 2 — Halogenated PAC filter
+
+```{r load-wf2, child = "Rmarkdown/20_wf2_halogen_filter.Rmd"}
+```
+
+```{r run-wf2}
+wf2_out <- run_wf2(sample_name)
+```
+
+# Workflow 3 — NSO heterocyclic PAC screen
+
+```{r load-wf3, child = "Rmarkdown/30_wf3_hpac_filter.Rmd"}
+```
+
+```{r run-wf3}
+wf3_out <- run_wf3(sample_name)
+```
+
+# Workflow 4 — Evidence integration
+
+```{r load-wf4, child = "Rmarkdown/40_wf4_integration.Rmd"}
+```
+
+```{r run-wf4}
+wf4_out <- run_wf4(sample_name)
+```
+
+# KMD confidence assessment and final plots
+
+```{r load-kmd, child = "Rmarkdown/50_kmd_confidence.Rmd"}
+```
+
+Model fitting is independent of any sample. `build_kmd_models()` fits the 12
+regression models and saves `kmd_final/standards_kmd_*.png` — the fitted
+lines plotted against the training data only, with no sample overlaid — so
+the models can be inspected on their own before being applied to real data.
+
+```{r build-kmd-models}
+kmd_models <- build_kmd_models()
+```
+
+```{r run-kmd}
+kmd_out <- run_kmd(sample_name, models = kmd_models)
+```
+
+# High-confidence halo-PAC integration
+
+Combines the two independent-ish halogen evidence streams — WF2 (isotope
+pattern + exact-mass match) and KMD (homologous-series regression) — into a
+single tiered list. KMD is used for class corroboration and anomaly flagging,
+not as independent proof of halo-PAC identity; the child document explains why.
+
+```{r load-hc, child = "Rmarkdown/60_high_confidence_halo_pacs.Rmd"}
+```
+
+```{r run-hc}
+hc_out <- run_high_confidence_halo_pacs(sample_name)
+```
+
+# Final report
+
+```{r final-table}
+# The integrated report, highest-reliability peaks first.
+if (!is.null(wf4_out)) {
+  wf4_out
+}
+```
+
+```{r final-plots, echo=FALSE, out.width="100%", results="asis"}
+# Display the standards-only diagnostic plots first (model fit, no sample
+# data), then the sample-specific plots, for each series in turn.
+cat("\n\n### Model diagnostics — training data only, no sample overlaid\n\n")
+for (ser in c("HCl", "Br2", "CH2")) {
+  f <- file.path(dir_kmd, sprintf("standards_kmd_%s.png", ser))
+  if (file.exists(f)) {
+    cat(sprintf("\n\n**%s series (standards only)**\n\n", ser))
+    cat(sprintf('<img src="%s" style="width:100%%;">\n\n', f))
+  }
+}
+
+cat(sprintf("\n\n### %s — tested against the models\n\n", sample_name))
+for (ser in c("HCl", "Br2", "CH2")) {
+  f <- file.path(dir_kmd, sprintf("%s_kmd_%s.png", sample_name, ser))
+  if (file.exists(f)) {
+    cat(sprintf("\n\n**%s series**\n\n", ser))
+    cat(sprintf('<img src="%s" style="width:100%%;">\n\n', f))
+  }
+}
+```
+
+```{r session-summary, echo=FALSE}
+elapsed <- round(as.numeric(difftime(Sys.time(), run_start, units = "secs")), 1)
+message("Run complete in ", elapsed, " s")
+tibble::tibble(
+  Item = c("Sample", "WF3 scoring scheme", "Run time (s)", "Final report",
+           "KMD plots"),
+  Value = c(sample_name, wf3_scoring, as.character(elapsed),
+            file.path("results_final", paste0(sample_name, "_final_PAC_report.csv")),
+            "kmd_final/")
+)
+```
+
+# Session information
+
+Recorded so that a run can be reproduced exactly, including package versions.
+
+```{r session-info}
+sessionInfo()
+```

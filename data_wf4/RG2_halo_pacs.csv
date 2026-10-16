@@ -1,0 +1,2 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+Peak 3627,2941,2.811,-0.004366,di_Br; mono_Cl,Acenaphthylene-Tetra-Cl,C12Cl4H4,M,2.57,"289.90264 (ri=1000), 287.90745 (ri=482), 291.89844 (ri=299)",361.83588 (ri=274),289.90264 (ri=1000)

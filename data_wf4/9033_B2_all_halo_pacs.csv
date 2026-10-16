@@ -1,0 +1,4 @@
+source_file,name,rt1_s,rt2_s,aromaticity_index,halogen_class,detected_isotope_peaks,top2_non_isotope_peaks
+9033_B2.csv,Peak 6277,2479,0.866,-0.001867,mono_Br,"199.97128 (ri=148), 201.96678 (ri=121)","207.71128 (ri=1000), 151.06921 (ri=945)"
+9033_B2.csv,Peak 7960,2860,2.537,-0.001877,poly_or_mixed,"201.97000 (ri=252), 199.97112 (ri=120)","211.46906 (ri=649), 207.71154 (ri=422)"
+9033_B2.csv,Peak 10383,3466,0.9,-0.001862,mono_Cl,"199.97136 (ri=210), 201.96751 (ri=103)","179.45580 (ri=1000), 167.45211 (ri=576)"

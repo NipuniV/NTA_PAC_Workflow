@@ -1,0 +1,2 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+Peak 5844,3067,1.046,0.002876,poly_or_mixed; mono_Cl,Phenanthrene-Mono-Cl,C14ClH9,M+4,4.53,"281.06710 (ri=853), 208.04603 (ri=791), 283.06410 (ri=292), 210.04324 (ri=117)","281.05304 (ri=1000), 209.04073 (ri=951)",281.05304 (ri=1000)

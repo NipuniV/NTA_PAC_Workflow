@@ -1,0 +1,33 @@
+library,compound,field,old_value,new_value,reason
+PAC_mass_spectral_library,"2,3-dibromothiophene",EXACT MASS,239.8185,239.82440,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,5-chlorobenzothiophene,EXACT MASS,168.9800,167.98005,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,2-bromobenzothiophene,EXACT MASS,212.9294,211.92953,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"2,3-dichlorobenzo[b]thiophene",EXACT MASS,202.9410,201.94108,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"1,2-dibromoacenaphthylene",EXACT MASS,309.8895,307.88363,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"2-bromodibenzo[b,d]thiophene",EXACT MASS,262.9449,261.94518,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"5,6-dibromo-1,2-dihydroacenaphthylene",EXACT MASS,311.9052,309.89928,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"2,7-dibromofluoranthene",EXACT MASS,359.8895,357.89928,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"3,6-dichloro-9H-carbazole",EXACT MASS,235.9797,234.99555,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,3-bromofluoranthene,EXACT MASS,280.9888,279.98876,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"9,10-dibromoanthracene",EXACT MASS,333.8895,333.89928,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,chrysene-d12,EXACT MASS,240.1884,240.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,1-bromopyrene,EXACT MASS,280.9888,279.98876,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"3,6-dibromocarbazole",EXACT MASS,323.8787,322.89452,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"9-bromo-1,5-chloroanthracene",EXACT MASS,290.9497,289.94979,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,benzo[b]fluoranthene-d12,EXACT MASS,264.1884,264.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,benzo[k]fluoranthene-d13,EXACT MASS,264.2685,264.16922,"Name states d13 but formula is C20D12. Benzo[k]fluoranthene is C20H12, so d12 is the maximum labelling; the name is most likely a typo for -d12. Formula left unchanged."
+PAC_mass_spectral_library,benzo[b]fluoranthene,FORMULA,C20D12,C20H12,Row named as the non-deuterated compound but carried the d12 formula (duplicate of the benzo[b]fluoranthene-d12 row). Benzo[b]fluoranthene is C20H12.
+PAC_mass_spectral_library,benzo[b]fluoranthene,EXACT MASS,264.2685,252.09390,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,perylene-d12,EXACT MASS,264.2685,264.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,benzo[a]pyrene-d12,EXACT MASS,264.2685,264.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"Indeno(1,2,3-cd)pyrene d12",EXACT MASS,288.2685,288.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"Dibenz(a,h)anthracene d14",EXACT MASS,292.2841,292.19742,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+PAC_mass_spectral_library,"Benzo(g,h,i)perylene d12",EXACT MASS,288.2685,288.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,"2,3-dibromothiophene",EXACT MASS,239.8185,239.82440,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,5-chlorobenzothiophene,EXACT MASS,168.9800,167.98005,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,2-bromobenzothiophene,EXACT MASS,212.9294,211.92953,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,"2,3-dichlorobenzo[b]thiophene",EXACT MASS,202.9410,201.94108,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,"2-bromodibenzo[b,d]thiophene",EXACT MASS,262.9449,261.94518,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,"3,6-dichloro-9H-carbazole",EXACT MASS,235.9797,234.99555,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,"3,6-dibromocarbazole",EXACT MASS,323.8787,322.89452,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.
+HPAC_mass_spectral_library,benzo[a]pyrene-d12,EXACT MASS,264.2685,264.16922,Tabulated mass did not match the monoisotopic mass of the stated formula; recomputed from formula.

@@ -1,0 +1,133 @@
+# =============================================================================
+# WORKFLOW 1 — Confidence-level assignment against the in-house PAC library
+# -----------------------------------------------------------------------------
+# PURPOSE
+#   Match every deconvoluted sample peak against the in-house library of
+#   authentic PAC standards, using three independent pieces of evidence:
+#
+#     (1) base-mass accuracy      -> is the elemental composition plausible?
+#     (2) fragment-ion overlap    -> does the spectrum look the same?
+#     (3) two-dimensional RT      -> does it elute in the same place?
+#
+#   Peaks are then assigned a confidence level according to how many of these
+#   three agree. Requiring agreement across independent evidence types is what
+#   separates a defensible identification from a coincidental mass match.
+#
+# INPUT   data_raw/<sample>.csv                  (shared with WF2 and WF3)
+#         data_wf1/PAC_mass_spectral_library.csv
+# OUTPUT  results_wf1/<sample>_lib_pacs_2ion.csv
+# =============================================================================
+
+run_wf1 <- function(sample_name) {
+
+  message("\n=== WORKFLOW 1 : library matching ===")
+
+  # ---- 1.1 Load ------------------------------------------------------------
+  library_raw <- read_spectra(file.path(dir_data$wf1, "PAC_mass_spectral_library.csv"))
+  sample_raw  <- read_spectra(raw_path(sample_name)) %>%
+    mutate(across(2:ncol(.), as.numeric))
+
+  message(sprintf("  Library standards : %d", n_distinct(library_raw$acronyms)))
+  message(sprintf("  Sample peaks      : %d", n_distinct(sample_raw$name)))
+
+  # Some ChromaTOF exports include an `area` column and some do not. WF4 uses
+  # it for reporting when present, so create an empty one if it is missing to
+  # keep the downstream column layout identical either way.
+  if (!"area" %in% names(sample_raw)) sample_raw$area <- NA_real_
+
+  # ---- 1.2 Reduce both spectra to their four most intense ions --------------
+  # The top four ions carry the diagnostic fragmentation pattern. Comparing
+  # only these keeps the cross-join tractable and avoids rewarding matches on
+  # low-intensity noise ions.
+  lib_long  <- reshape_ms_long(library_raw, "acronyms",        top_n = 4)
+  samp_long <- reshape_ms_long(sample_raw,  c("name", "area"), top_n = 4)
+
+  # ---- 1.3 Match every sample peak against every standard ------------------
+  # cross_join builds all pairwise combinations; the ppm filter immediately
+  # discards almost all of them, so this stays fast.
+  matches <- samp_long %>%
+    cross_join(lib_long, suffix = c("_samp", "_lib")) %>%
+
+    # (1) base-mass accuracy
+    mutate(ppm_diff = abs(base_mass_samp - base_mass_lib) / base_mass_lib * 1e6) %>%
+    filter(ppm_diff <= mass_tol_ppm) %>%
+
+    # (2) fragment-ion overlap: does this sample ion appear in the standard?
+    mutate(is_ion_match = abs(m_samp - m_lib) < 0.005) %>%
+
+    # collapse the per-ion rows back to one row per (peak, standard) pair
+    group_by(name, acronyms) %>%
+    summarise(
+      base_mass          = first(base_mass_samp),
+      area               = first(area),
+      matched_ions       = paste(round(m_samp[is_ion_match], 4), collapse = ", "),
+      ions_matched_count = sum(is_ion_match),
+      t1_samp            = first(x1st_dimension_time_s_samp),
+      t2_samp            = first(x2nd_dimension_time_s_samp),
+      t1_lib             = first(x1st_dimension_time_s_lib),
+      t2_lib             = first(x2nd_dimension_time_s_lib),
+      .groups = "drop"
+    ) %>%
+
+    # (3) retention behaviour, and rejection of chromatographically implausible
+    #     matches: a genuine isomer still elutes within a few minutes of its
+    #     parent, so anything beyond the isomer window is coincidence.
+    mutate(t1_dist_s = abs(t1_samp - t1_lib)) %>%
+    filter(ions_matched_count >= min_ions_matched,
+           t1_dist_s <= t1_isomer_window) %>%
+
+    mutate(
+      t1_dist_min = t1_dist_s / 60,
+      t2_dist_s   = abs(t2_samp - t2_lib),
+      # TRUE only when the peak sits inside the 2D retention box of the standard
+      rt_match    = (t1_dist_s <= t1_tol & t2_dist_s <= t2_tol),
+
+      # ---- Confidence hierarchy ------------------------------------------
+      # Level 1  RT box + >=3 of top-4 ions  -> confirmed against the standard
+      # Level 2  RT box but weaker spectrum  -> probable, verify the spectrum
+      # Level 3  spectrum matches, RT does not -> almost certainly an ISOMER of
+      #          the standard: same formula and fragmentation, different
+      #          structure, so it is a non-target identification rather than a
+      #          failed one
+      # Candidate  mass matched but nothing else did
+      confidence = case_when(
+        rt_match  & ions_matched_count >= 3 ~ "Level 1: Confirmed",
+        rt_match  & ions_matched_count >= min_ions_matched ~ "Level 2: Probable (Check MS)",
+        !rt_match & ions_matched_count >= 3 ~ "Level 3: Isomer (Non-Target)",
+        TRUE ~ "Candidate"
+      )
+    )
+
+  # ---- 1.4 Keep only the single best assignment per sample peak ------------
+  # Without this a peak can be reported several times against different
+  # standards, inflating the apparent number of identifications.
+  matches_filtered <- matches %>%
+    mutate(confidence_rank = case_when(
+      confidence == "Level 1: Confirmed"           ~ 1,
+      confidence == "Level 2: Probable (Check MS)" ~ 2,
+      confidence == "Level 3: Isomer (Non-Target)" ~ 3,
+      TRUE                                         ~ 4
+    )) %>%
+    arrange(name, confidence_rank, desc(ions_matched_count), t1_dist_s, t2_dist_s) %>%
+    group_by(name) %>%
+    slice(1) %>%
+    ungroup()
+
+  final_table <- matches_filtered %>%
+    select(name, acronyms, confidence, ions_matched_count, matched_ions,
+           t1_samp, t2_samp, t1_dist_s, t1_dist_min, t2_dist_s, area, base_mass) %>%
+    arrange(desc(ions_matched_count))
+
+  # ---- 1.5 Save ------------------------------------------------------------
+  out <- file.path(dir_res$wf1, paste0(sample_name, "_lib_pacs_2ion.csv"))
+  write_csv(final_table, out)
+
+  message(sprintf("  Assigned peaks    : %d", nrow(final_table)))
+  print(count(final_table, confidence, name = "n"))
+  message("  Saved: ", basename(out))
+
+  # WF4 consumes this file, so place a copy in its data folder.
+  stage_file(out, dir_data$wf4)
+
+  invisible(final_table)
+}

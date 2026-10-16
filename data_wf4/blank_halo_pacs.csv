@@ -1,0 +1,12 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+"Cycloheptasiloxane, tetradecamethyl-",1489,1.617,-0.001401,poly_or_mixed; mono_Cl,11H-Benzo[a]carbazole-Mono-Cl-Mono-Br,C16BrClH9N,M+2,5.84,"281.05018 (ri=942), 326.96477 (ri=599), 283.04775 (ri=168), 328.96261 (ri=132)","147.06546 (ri=1000), 73.05232 (ri=565)",147.06546 (ri=1000)
+Peak 2390,2701,1.464,-0.0014,poly_or_mixed,11H-Benzo[a]carbazole-Mono-Cl-Mono-Br,C16BrClH9N,M+2,8.91,"326.96479 (ri=1000), 328.96362 (ri=169)","266.99858 (ri=917), 63.04402 (ri=544)",326.96479 (ri=1000)
+Peak 2686,2935,1.217,-4.5e-5,poly_or_mixed,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,13.16,"266.99908 (ri=915), 341.01667 (ri=700), 343.01377 (ri=121), 268.99632 (ri=109)","193.01622 (ri=1000), 192.98007 (ri=894)",193.01622 (ri=1000)
+Peak 2798,3028,1.329,6.55e-4,poly_or_mixed,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,10.43,"341.01718 (ri=796), 343.01471 (ri=120)","281.05029 (ri=1000), 266.99908 (ri=489)",281.05029 (ri=1000)
+Peak 2968,3211,1.337,6.3e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,12.87,"341.01652 (ri=477), 343.01387 (ri=197)","145.06797 (ri=1000), 403.03148 (ri=769)",145.06797 (ri=1000)
+Peak 2974,3217,1.123,6.42e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,7.39,"341.01685 (ri=551), 343.01576 (ri=142)","147.06554 (ri=1000), 59.04910 (ri=925)",147.06554 (ri=1000)
+Peak 3038,3310,1.123,6.47e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,8.87,"341.01696 (ri=467), 343.01525 (ri=134)","147.06583 (ri=1000), 59.04923 (ri=718)",147.06583 (ri=1000)
+Peak 3050,3337,1.123,-0.001361,mono_Cl,11H-Benzo[a]carbazole-Mono-Cl-Mono-Br,C16BrClH9N,M+2,8.21,"326.96578 (ri=541), 328.96339 (ri=145)","147.06557 (ri=1000), 59.04920 (ri=647)",147.06557 (ri=1000)
+Peak 3083,3418,1.123,6.46e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,10.78,"341.01694 (ri=401), 343.01459 (ri=150)","147.06584 (ri=1000), 59.04939 (ri=621)",147.06584 (ri=1000)
+Peak 3111,3535,1.123,6.48e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,12.2,"341.01699 (ri=395), 343.01410 (ri=114)","147.06597 (ri=1000), 59.04912 (ri=649)",147.06597 (ri=1000)
+Peak 3116,3568,1.123,6.17e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,10.35,"341.01618 (ri=486), 343.01474 (ri=109)","147.06557 (ri=1000), 59.04920 (ri=602)",147.06557 (ri=1000)

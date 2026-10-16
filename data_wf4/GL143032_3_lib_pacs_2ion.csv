@@ -1,0 +1,10 @@
+name,acronyms,confidence,ions_matched_count,matched_ions,t1_samp,t2_samp,t1_dist_s,t1_dist_min,t2_dist_s,area,base_mass
+4-Benzyl-1-(1-methyl-2-[(trimethylsilyl)oxy]-2-{4-[(trimethylsilyl)oxy]phenyl}ethyl)piperidine,Flt,Level 1: Confirmed,3,"202.0759, 200.0594, 201.0663",2650,1.311,4,0.06666666666666667,0.23099999999999987,376090,202.08
+"9,10-Anthracenedione, 1,4-bis(acetyloxy)-",Chr-d12,Level 1: Confirmed,3,"240.169, 236.1441, 241.1735",3028,0.591,2,0.03333333333333333,0.173,244799,240.17
+"Benzo[b]naphtho[e](1-oxoindano)[2,3-h]bicylo[2.2.2]octane",BaAnt,Level 3: Isomer (Non-Target),3,"228.0916, 226.0764, 229.0956",3040,0.711,7,0.11666666666666667,0.30499999999999994,852235,228.09
+"Ethylamine, N-heptyl-N-octyl-2-(2-thiophenyl)-",Chr-d12,Level 1: Confirmed,3,"240.1709, 236.1399, 241.1745",3034,0.703,4,0.06666666666666667,0.285,268827,240.17
+Peak 1016,BkF,Level 1: Confirmed,3,"252.0915, 253.0983, 250.0812",3256,1.903,1,0.016666666666666666,0.27300000000000013,352985,252.09
+Peak 1087,Per,Candidate,2,"252.0947, 253.0935",3331,0.06,9,0.15,2.5829999999999997,363412,252.09
+Peak 352,"4,5-DiMePyr",Candidate,2,"215.0881, 216.0937",2824,0.586,123,2.05,0.39999999999999997,115526,215.09
+Peak 380,"4,5-DiMePyr",Candidate,2,"215.0882, 213.0698",2842,0.601,105,1.75,0.415,159292,215.09
+"l-Leucine, N-methyl-N-(2-methoxyethoxycarbonyl)-, tetradecyl ester",Pyr,Candidate,2,"202.077, 201.066",2722,1.183,8,0.13333333333333333,0.3630000000000001,1153768,202.08

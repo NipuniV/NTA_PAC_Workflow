@@ -1,0 +1,3 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+Peak 191,1495,1.611,0.002619,poly_or_mixed,Benzo[a]pyrene-Mono-Cl,C20ClH11,M+4,18.7,"282.05683 (ri=967), 284.05258 (ri=121)","327.97224 (ri=1000), 341.02166 (ri=628)",327.97224 (ri=1000)
+Peak 2434,3058,1.337,8.5e-4,mono_Cl,"7H-Dibenzo[c,g]carbazole-Mono-Br",C20BrH12N,M+4,0.81,"281.05210 (ri=911), 341.02229 (ri=485), 283.05048 (ri=275), 343.01803 (ri=127)","147.06388 (ri=1000), 355.07297 (ri=914)",147.06388 (ri=1000)

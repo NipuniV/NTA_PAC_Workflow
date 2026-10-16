@@ -1,0 +1,2 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+Peak 888,3058,2.809,-0.006604,poly_or_mixed,Dibenzofuran-Di-Cl-Di-Br,C12Br2Cl2H4O,M,0.92,"393.79859 (ri=547), 391.80096 (ri=229)","209.13282 (ri=1000), 395.79453 (ri=528)",209.13282 (ri=1000)

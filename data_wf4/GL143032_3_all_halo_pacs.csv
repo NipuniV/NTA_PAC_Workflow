@@ -1,0 +1,7 @@
+source_file,name,rt1_s,rt2_s,aromaticity_index,halogen_class,detected_isotope_peaks,top2_non_isotope_peaks
+GL143032_3.csv,"Cyclotrisiloxane, hexamethyl-",3025,1.056,0.002035,poly_or_mixed,"207.03241 (ri=1000), 209.02986 (ri=168)",208.02948 (ri=163)
+GL143032_3.csv,Peak 689,3058,1.346,0.002805,mono_Cl,"281.06065 (ri=563), 283.05790 (ri=126)","147.06694 (ri=1000), 221.08743 (ri=954)"
+GL143032_3.csv,Peak 690,3058,1.399,0.002805,poly_or_mixed,"281.06065 (ri=617), 283.05790 (ri=111)","221.08743 (ri=1000), 83.08623 (ri=241)"
+GL143032_3.csv,"Cyclotrisiloxane, hexamethyl-",3397,1.058,0.002354,mono_Cl,"207.03749 (ri=795), 209.03433 (ri=304)","207.03202 (ri=1000), 208.03628 (ri=308)"
+GL143032_3.csv,"4-tert-Octylphenol, TMS derivative",3445,1.059,0.002478,poly_or_mixed,"207.03947 (ri=866), 209.03546 (ri=132)","207.03200 (ri=1000), 208.03429 (ri=365)"
+GL143032_3.csv,"Cyclotrisiloxane, hexamethyl-",3490,1.054,0.002009,poly_or_mixed,"207.03200 (ri=1000), 209.02737 (ri=125)",191.00373 (ri=121)

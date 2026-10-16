@@ -1,0 +1,7 @@
+source_file,name,rt1_s,rt2_s,aromaticity_index,halogen_class,detected_isotope_peaks,top2_non_isotope_peaks
+GL143031_1.csv,"Cyclotrisiloxane, hexamethyl-",2830,1.058,0.002004,poly_or_mixed,"207.03191 (ri=1000), 209.02932 (ri=103)","133.01452 (ri=178), 208.03185 (ri=173)"
+GL143031_1.csv,"Cyclotrisiloxane, hexamethyl-",2848,1.054,0.00201,poly_or_mixed,"207.03201 (ri=1000), 209.03067 (ri=113)","208.03153 (ri=224), 281.04896 (ri=163)"
+GL143031_1.csv,Peak 770,2995,0.128,0.003837,poly_or_mixed,"197.05817 (ri=1000), 199.05565 (ri=124)","292.08705 (ri=482), 123.02499 (ri=370)"
+GL143031_1.csv,Peak 888,3058,2.809,-0.006604,poly_or_mixed,"393.79859 (ri=547), 391.80096 (ri=229)","209.13282 (ri=1000), 395.79453 (ri=528)"
+GL143031_1.csv,"Cyclotrisiloxane, hexamethyl-",3232,1.054,0.002009,poly_or_mixed,"207.03200 (ri=1000), 209.03015 (ri=132)","208.03322 (ri=194), 281.04858 (ri=161)"
+GL143031_1.csv,"Cyclotrisiloxane, hexamethyl-",3430,1.054,0.002009,poly_or_mixed,"207.03199 (ri=1000), 209.02870 (ri=148)","208.03240 (ri=186), 191.00163 (ri=139)"

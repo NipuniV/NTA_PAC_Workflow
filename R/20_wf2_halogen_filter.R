@@ -1,0 +1,429 @@
+# =============================================================================
+# WORKFLOW 2 — Identification of halogenated PACs by isotope-pattern filtering
+# -----------------------------------------------------------------------------
+# PURPOSE
+#   Find chlorine- and bromine-containing aromatic compounds without any prior
+#   knowledge of what they are.
+#
+#   The physical basis is that chlorine and bromine each have two abundant
+#   stable isotopes with FIXED natural abundances:
+#       35Cl : 37Cl  =  3 : 1        79Br : 81Br  =  1 : 1
+#   A halogenated ion therefore always appears as a cluster (M, M+2, M+4...)
+#   whose intensity ratios are set by nuclear physics and cannot be faked by
+#   an unrelated compound. This makes a well-formed isotope cluster close to
+#   decisive evidence of halogen content — far stronger evidence than any
+#   single mass measurement.
+#
+#   Filters applied, in order:
+#     1. retention time and base mass  -> remove solvent front and noise
+#     2. column-bleed removal          -> remove ubiquitous siloxane ions
+#     3. isotope-pair detection        -> find M / M+2 pairs
+#     4. aromaticity index             -> keep aromatics, drop aliphatics
+#     5. 13C check                     -> reject misread isotope peaks
+#     6. intensity ratio + M+4         -> classify mono- vs di-halogenation
+#     7. exact-mass matching           -> propose candidate identities
+#
+# INPUT   data_raw/<sample>.csv                  (shared with WF1 and WF3)
+#         data_wf2/possible_halo_pacs2.csv
+# OUTPUT  results_wf2/<sample>_all_halo_pacs.csv  (all halogen-positive peaks)
+#         results_wf2/<sample>_halo_pacs.csv      (subset matched to reference)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# classify_halogen() — assign a halogen class from the isotope intensity ratios.
+#
+#   m2_ratio = I(M) / I(M+2)     m4_ratio = I(M) / I(M+4)
+#
+# Expected values follow directly from the isotope abundances:
+#   mono-Cl   M:M+2 = 3:1   -> m2_ratio ~ 3.0, no meaningful M+4
+#   mono-Br   M:M+2 = 1:1   -> m2_ratio ~ 1.0, no meaningful M+4
+#   di-Cl     9:6:1         -> m2_ratio ~ 1.5, m4_ratio ~ 9
+#   di-Br     1:2:1         -> m2_ratio ~ 0.5, m4_ratio ~ 1
+# Anything else is reported as mixed/poly-halogenated rather than forced into
+# one of the four classes.
+# -----------------------------------------------------------------------------
+classify_halogen <- function(m2_ratio, m4_ratio) {
+  dplyr::case_when(
+    m2_ratio >= 2.0 & m2_ratio <= 5.0 & m4_ratio > 20                  ~ "mono_Cl",
+    m2_ratio >= 0.7 & m2_ratio <  1.5 & m4_ratio > 20                  ~ "mono_Br",
+    m2_ratio >= 1.0 & m2_ratio <  2.0 & m4_ratio >= 5 & m4_ratio <= 20 ~ "di_Cl",
+    m2_ratio >  0.3 & m2_ratio <  0.7 & m4_ratio >= 0.5 & m4_ratio <= 4 ~ "di_Br",
+    TRUE                                                                ~ "poly_or_mixed"
+  )
+}
+
+
+# -----------------------------------------------------------------------------
+# find_halogen_pairs() — scan a single spectrum for valid halogen isotope pairs.
+# Returns one row per accepted pair, or NULL if the spectrum contains none.
+# -----------------------------------------------------------------------------
+find_halogen_pairs <- function(spec_df) {
+
+  # Only fragments above 100 Da are considered: below this, the ion density is
+  # high enough that accidental 2 Da spacings become common.
+  candidates_A <- spec_df %>% dplyr::filter(mass > 100)
+  if (nrow(candidates_A) == 0) return(NULL)
+
+  rows <- list(); k <- 0L
+
+  for (i in seq_len(nrow(candidates_A))) {
+
+    A_mass <- candidates_A$mass[i]        # treat this ion as the M+2 peak
+    A_int  <- candidates_A$intensity[i]
+
+    # --- Step 1: is there a partner ~1.997 Da BELOW it (the M peak)? --------
+    mono <- spec_df %>%
+      dplyr::filter(abs(mass - (A_mass - wf2_iso_offset)) <= wf2_tol_mass)
+    if (nrow(mono) == 0) next
+
+    B_mass <- mono$mass[1]
+    B_int  <- mono$intensity[1]
+
+    # --- Step 2: aromaticity index gate ------------------------------------
+    # Applied to the monoisotopic peak. Retains aromatic (hydrogen-poor) ions
+    # and rejects hydrogen-rich aliphatics, whose mass defects sit well above
+    # the aromatic band. The window is two-sided: the lower bound removes ions
+    # with extreme negative mass defects, which are not aromatic PACs either.
+    b_ai <- aromaticity_index(B_mass)
+    if (b_ai >= wf2_ai_max || b_ai <= wf2_ai_min) next
+
+    # --- Step 3: 13C guard --------------------------------------------------
+    # If a strong peak sits exactly 1.0033 Da above B, then B is more likely a
+    # 13C satellite of a larger ion than a true monoisotopic peak.
+    c13 <- spec_df %>%
+      dplyr::filter(abs(mass - (B_mass + 1.0033)) <= wf2_tol_mass)
+    if (nrow(c13) > 0 && c13$intensity[1] >= 0.20 * B_int) next
+
+    # --- Step 4: intensity ratio -------------------------------------------
+    # Rejects pairs where the putative M+2 is far too weak to be a halogen
+    # isotopologue (i.e. it is just noise sitting 2 Da away).
+    m2_ratio <- B_int / A_int
+    if (m2_ratio < wf2_min_b_pct_of_a) next
+
+    # --- Step 5: look for M+4 ----------------------------------------------
+    # Presence and relative size of M+4 is what distinguishes di- from
+    # mono-halogenation. Infinite ratio = no M+4 found.
+    D_match <- spec_df %>%
+      dplyr::filter(abs(mass - (A_mass + wf2_iso_offset)) <= wf2_tol_mass)
+    D_int    <- if (nrow(D_match) > 0) D_match$intensity[1] else 0
+    m4_ratio <- if (D_int > 0) B_int / D_int else Inf
+
+    k <- k + 1L
+    rows[[k]] <- data.frame(
+      halogen_class     = classify_halogen(m2_ratio, m4_ratio),
+      A_mass            = round(A_mass, 5),
+      B_mass            = round(B_mass, 5),
+      B_over_A          = round(m2_ratio, 3),
+      M_over_M4         = ifelse(is.infinite(m4_ratio), NA, round(m4_ratio, 3)),
+      aromaticity_index = round(b_ai, 6),
+      stringsAsFactors  = FALSE
+    )
+  }
+
+  if (k == 0L) return(NULL)
+  dplyr::bind_rows(rows)
+}
+
+
+run_wf2 <- function(sample_name) {
+
+  message("\n=== WORKFLOW 2 : halogenated PAC filter ===")
+
+  # ---- 2.1 Load ------------------------------------------------------------
+  # Read every column as text. This removes readr's type inference — which is
+  # based on only the first 1000 rows and was the origin of the failure
+  # described in section 2.2 — and every column is coerced explicitly instead.
+  raw_data <- read_csv(raw_path(sample_name),
+                       col_types = cols(.default = col_character()),
+                       show_col_types = FALSE) %>%
+    clean_names() %>%
+    mutate(source_file = paste0(sample_name, ".csv"))
+  pac_ref  <- clean_names(read_csv(file.path(dir_data$wf2, "possible_halo_pacs2.csv"),
+                                   show_col_types = FALSE))
+
+  # ---- 2.2 Reshape wide spectra to long -----------------------------------
+  # Spectrum columns are identified BY NAME (m1/ri1, m2/ri2, ...) and paired on
+  # their NUMBER, not on their position in the file.
+  #
+  # WHY THIS IS NOT A SIMPLE POSITIONAL SPLIT
+  #
+  # WF2 previously returned nothing at all for YP1 and 9031_B1 while working
+  # normally on std_check and std1_LE. The difference between those files is
+  # that YP1 and 9031_B1 carry trailing columns with no header label (72 and
+  # 122 of them), and both also contain Excel error strings such as `#VALUE!`
+  # and `#SPILL!` left behind in the ion columns.
+  #
+  # Those unlabelled columns are empty for the first several thousand rows, so
+  # readr — which infers column types from the first 1000 rows by default —
+  # typed them as `logical`, while the labelled ion columns came through as
+  # `double` or, where an Excel error string appeared, as `character`. Building
+  # the long table from that mixture is what caused the stage to fail.
+  #
+  # The file is therefore now read entirely as text and every column is coerced
+  # explicitly below, which removes type inference from the process altogether.
+  fixed_cols <- c("name", "x1st_dimension_time_s", "x2nd_dimension_time_s",
+                  "base_mass", "source_file")
+
+  spec_names <- setdiff(names(raw_data), fixed_cols)
+
+  # (a) Columns that carry a proper m<N> / ri<N> label are paired on their
+  #     NUMBER, so m5 is always matched with ri5 even if the export reorders
+  #     columns or omits one.
+  m_nums  <- suppressWarnings(as.integer(str_match(spec_names, "^m(\\d+)$")[, 2]))
+  ri_nums <- suppressWarnings(as.integer(str_match(spec_names, "^ri(\\d+)$")[, 2]))
+
+  ion_nums <- sort(intersect(m_nums[!is.na(m_nums)], ri_nums[!is.na(ri_nums)]))
+  mass_cols      <- character(0)
+  intensity_cols <- character(0)
+  if (length(ion_nums) > 0) {
+    mass_cols      <- spec_names[match(ion_nums, m_nums)]
+    intensity_cols <- spec_names[match(ion_nums, ri_nums)]
+  }
+
+  # (b) ChromaTOF regularly writes MORE ion columns than it writes header
+  #     labels for: YP1 has 72 unlabelled columns and 9031_B1 has 122, and in
+  #     both files those columns contain real mass/intensity data (752 and 381
+  #     spectra respectively). They are the 19th ion onwards for spectra richer
+  #     than the header allowed for. Dropping them would silently discard real
+  #     data, so they are paired positionally, in file order, continuing the
+  #     mass/intensity alternation. Any odd column left over is ignored, since
+  #     an unpaired mass has no intensity to go with it.
+  labelled  <- !is.na(m_nums) | !is.na(ri_nums)
+  tail_cols <- spec_names[!labelled]
+  if (length(tail_cols) >= 2) {
+    keep_n    <- length(tail_cols) - (length(tail_cols) %% 2)
+    tail_cols <- tail_cols[seq_len(keep_n)]
+    mass_cols      <- c(mass_cols,      tail_cols[seq(1, keep_n, by = 2)])
+    intensity_cols <- c(intensity_cols, tail_cols[seq(2, keep_n, by = 2)])
+  }
+
+  if (length(mass_cols) == 0) {
+    stop("WF2: no ion column pairs found in ", basename(raw_path(sample_name)),
+         " - check that the export has the expected ChromaTOF layout.")
+  }
+
+  message(sprintf("  Ion column pairs         : %d (%d labelled + %d unlabelled)",
+                  length(mass_cols), length(ion_nums),
+                  length(mass_cols) - length(ion_nums)))
+
+  # Retention times and base mass are used as numeric filters. If Excel has left
+  # a single stray text value anywhere in one of these columns, readr types the
+  # whole column as character and every numeric comparison silently evaluates to
+  # FALSE, removing every peak without raising an error. Coercing here makes
+  # that impossible.
+  raw_data <- raw_data %>%
+    mutate(across(all_of(c("x1st_dimension_time_s", "x2nd_dimension_time_s",
+                           "base_mass")),
+                  ~ suppressWarnings(as.numeric(.x))))
+
+  mass_long <- raw_data %>%
+    select(all_of(fixed_cols), all_of(mass_cols)) %>%
+    mutate(across(all_of(mass_cols), ~ suppressWarnings(as.numeric(.x)))) %>%
+    pivot_longer(all_of(mass_cols), names_to = "mass_col", values_to = "mass") %>%
+    mutate(pair_id = match(mass_col, mass_cols)) %>% select(-mass_col)
+
+  intensity_long <- raw_data %>%
+    select(all_of(fixed_cols), all_of(intensity_cols)) %>%
+    mutate(across(all_of(intensity_cols), ~ suppressWarnings(as.numeric(.x)))) %>%
+    pivot_longer(all_of(intensity_cols), names_to = "int_col", values_to = "intensity") %>%
+    mutate(pair_id = match(int_col, intensity_cols)) %>% select(-int_col)
+
+  tidy_spectra <- mass_long %>%
+    left_join(intensity_long,
+              by = c("source_file", "name", "x1st_dimension_time_s",
+                     "x2nd_dimension_time_s", "base_mass", "pair_id")) %>%
+    mutate(base_mass = as.numeric(base_mass)) %>%
+    filter(!is.na(mass), !is.na(intensity), intensity > 0)
+
+  message(sprintf("  Peaks in raw file        : %d", n_distinct(tidy_spectra$name)))
+
+  # ---- 2.3 Retention time / base mass pre-filter --------------------------
+  filtered_base <- tidy_spectra %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s) %>%
+    filter(any(base_mass > wf2_min_base_mass),
+           x1st_dimension_time_s > wf2_min_rt1) %>%
+    ungroup()
+  message(sprintf("  After RT / base-mass cut : %d", n_distinct(filtered_base$name)))
+
+  # ---- 2.4 Column-bleed removal -------------------------------------------
+  bleed_peaks <- filtered_base %>%
+    select(source_file, name, x1st_dimension_time_s,
+           x2nd_dimension_time_s, base_mass) %>%
+    distinct() %>%
+    rowwise() %>%
+    filter(any(ppm_diff(base_mass, bleed_masses) <= wf2_bleed_ppm)) %>%
+    ungroup()
+
+  filtered_no_bleed <- filtered_base %>%
+    anti_join(bleed_peaks, by = c("source_file", "name",
+                                  "x1st_dimension_time_s", "x2nd_dimension_time_s"))
+  message(sprintf("  After bleed removal      : %d", n_distinct(filtered_no_bleed$name)))
+
+  # ---- 2.5 Isotope-pattern filter -----------------------------------------
+  peak_groups <- filtered_no_bleed %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s) %>%
+    group_split()
+
+  classify_peak <- function(grp) {
+    pairs <- find_halogen_pairs(grp)
+    if (is.null(pairs)) return(NULL)
+    tibble(
+      source_file           = grp$source_file[1],
+      name                  = grp$name[1],
+      x1st_dimension_time_s = grp$x1st_dimension_time_s[1],
+      x2nd_dimension_time_s = grp$x2nd_dimension_time_s[1],
+      halogen_class         = paste(unique(pairs$halogen_class), collapse = "; "),
+      aromaticity_index     = round(min(pairs$aromaticity_index), 6),
+      iso_masses_found      = list(unique(c(pairs$A_mass, pairs$B_mass)))
+    )
+  }
+
+  halogen_results <- map_dfr(peak_groups, classify_peak)
+  message(sprintf("  Passing halogen filter   : %d", nrow(halogen_results)))
+  if (nrow(halogen_results) == 0) {
+    # Write empty files rather than returning silently, so that a run which
+    # genuinely finds nothing is distinguishable from a run that failed.
+    warning("WF2: no peaks passed the halogen isotope filter for '", sample_name,
+            "'. Empty output files were written so the run remains traceable.")
+    empty <- tibble(source_file = character(), name = character(),
+                    rt1_s = numeric(), rt2_s = numeric(),
+                    aromaticity_index = numeric(), halogen_class = character(),
+                    detected_isotope_peaks = character(),
+                    top2_non_isotope_peaks = character())
+    write_csv(empty, file.path(dir_res$wf2,
+                               paste0(sample_name, "_all_halo_pacs.csv")))
+    write_csv(empty, file.path(dir_res$wf2,
+                               paste0(sample_name, "_halogen_filter_NTA.csv")))
+    return(invisible(NULL))
+  }
+  print(halogen_results %>% separate_rows(halogen_class, sep = "; ") %>%
+          count(halogen_class, sort = TRUE))
+
+  # ---- 2.6 Report isotope peaks and the two strongest other ions -----------
+  final_spectra <- filtered_no_bleed %>%
+    semi_join(halogen_results, by = c("source_file", "name",
+                                      "x1st_dimension_time_s", "x2nd_dimension_time_s"))
+
+  build_output_row <- function(grp) {
+    hr <- halogen_results %>%
+      filter(source_file == grp$source_file[1], name == grp$name[1],
+             x1st_dimension_time_s == grp$x1st_dimension_time_s[1],
+             x2nd_dimension_time_s == grp$x2nd_dimension_time_s[1])
+    iso <- if (nrow(hr) > 0) unlist(hr$iso_masses_found) else numeric(0)
+
+    fmt <- function(d) {
+      if (nrow(d) == 0) return(NA_character_)
+      d %>% arrange(desc(intensity)) %>%
+        mutate(lbl = sprintf("%.5f (ri=%.0f)", mass, intensity)) %>%
+        pull(lbl) %>% paste(collapse = ", ")
+    }
+    tibble(
+      source_file            = grp$source_file[1],
+      name                   = grp$name[1],
+      x1st_dimension_time_s  = grp$x1st_dimension_time_s[1],
+      x2nd_dimension_time_s  = grp$x2nd_dimension_time_s[1],
+      detected_isotope_peaks = fmt(grp %>% filter(round(mass, 5) %in% iso)),
+      top2_non_isotope_peaks = fmt(grp %>% filter(!round(mass, 5) %in% iso) %>%
+                                     arrange(desc(intensity)) %>% slice_head(n = 2))
+    )
+  }
+
+  peak_details <- final_spectra %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s) %>%
+    group_split() %>% map_dfr(build_output_row)
+
+  final_output <- halogen_results %>%
+    select(-iso_masses_found) %>%
+    rename(rt1_s = x1st_dimension_time_s, rt2_s = x2nd_dimension_time_s) %>%
+    left_join(peak_details %>% rename(rt1_s = x1st_dimension_time_s,
+                                      rt2_s = x2nd_dimension_time_s),
+              by = c("source_file", "name", "rt1_s", "rt2_s")) %>%
+    select(source_file, name, rt1_s, rt2_s, aromaticity_index, halogen_class,
+           detected_isotope_peaks, top2_non_isotope_peaks) %>%
+    arrange(source_file, rt1_s, rt2_s)
+
+  out_all <- file.path(dir_res$wf2, paste0(sample_name, "_all_halo_pacs.csv"))
+  write_csv(final_output, out_all)
+  message("  Saved: ", basename(out_all))
+
+  # Standalone halogen-filter output for general NTA reporting. Identical
+  # content to the file above, saved under an explicit name because it is a
+  # meaningful deliverable in its own right: it depends only on isotope physics,
+  # not on the compound existing in possible_halo_pacs2.csv, so it flags
+  # halogen-bearing peaks that no reference table contains.
+  out_halogen_filter <- file.path(dir_res$wf2,
+                                  paste0(sample_name, "_halogen_filter_NTA.csv"))
+  write_csv(final_output, out_halogen_filter)
+  message("  Saved: ", basename(out_halogen_filter))
+
+  # ---- 2.7 Match against known halo-PAC exact masses ----------------------
+  # M, M+2 and M+4 are all tested, because different reference sources tabulate
+  # different isotopologues, and in a real spectrum the M+2 peak is often the
+  # most intense of the cluster. matched_via records which one produced the hit.
+  candidate_masses <- halogen_results %>%
+    select(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s,
+           halogen_class, aromaticity_index, iso_masses_found) %>%
+    rowwise() %>%
+    mutate(all_masses = list({
+      masses   <- unlist(iso_masses_found)
+      a_masses <- masses[sapply(masses, function(a)
+        any(abs(masses - (a - wf2_iso_offset)) < 0.005))]     # M+2 peaks
+      b_masses <- masses[sapply(masses, function(b)
+        any(abs(masses - (b + wf2_iso_offset)) < 0.005))]     # M peaks
+      rbind(
+        data.frame(cand_mass = b_masses,                  mass_type = "M",   stringsAsFactors = FALSE),
+        data.frame(cand_mass = a_masses,                  mass_type = "M+2", stringsAsFactors = FALSE),
+        data.frame(cand_mass = a_masses + wf2_iso_offset, mass_type = "M+4", stringsAsFactors = FALSE)
+      )
+    })) %>%
+    ungroup() %>% unnest(all_masses) %>% filter(!is.na(cand_mass))
+
+  pac_matches <- candidate_masses %>%
+    cross_join(pac_ref %>% select(possible_compounds, formula, exact_mass)) %>%
+    mutate(ppm_error = abs(cand_mass - exact_mass) / exact_mass * 1e6) %>%
+    filter(ppm_error <= wf2_ppm_match) %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s,
+             possible_compounds, formula) %>%
+    slice_min(ppm_error, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s) %>%
+    summarise(
+      possible_halo_pac = paste(possible_compounds, collapse = "; "),
+      matched_formula   = paste(formula,            collapse = "; "),
+      matched_via       = paste(mass_type,          collapse = "; "),
+      best_ppm_error    = round(min(ppm_error), 2),
+      .groups = "drop"
+    )
+
+  base_peaks <- final_spectra %>%
+    group_by(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s) %>%
+    slice_max(intensity, n = 1, with_ties = FALSE) %>% ungroup() %>%
+    mutate(base_peak = sprintf("%.5f (ri=%.0f)", mass, intensity)) %>%
+    select(source_file, name, x1st_dimension_time_s, x2nd_dimension_time_s, base_peak)
+
+  halo_pacs <- final_output %>%
+    rename(x1st_dimension_time_s = rt1_s, x2nd_dimension_time_s = rt2_s) %>%
+    inner_join(pac_matches, by = c("source_file", "name",
+                                   "x1st_dimension_time_s", "x2nd_dimension_time_s")) %>%
+    left_join(base_peaks, by = c("source_file", "name",
+                                 "x1st_dimension_time_s", "x2nd_dimension_time_s")) %>%
+    select(name,
+           rt1_s = x1st_dimension_time_s,
+           rt2_s = x2nd_dimension_time_s,
+           aromaticity_index, halogen_class, possible_halo_pac, matched_formula,
+           matched_via, best_ppm_error, detected_isotope_peaks,
+           top2_non_isotope_peaks, base_peak) %>%
+    arrange(rt1_s, rt2_s)
+
+  out_matched <- file.path(dir_res$wf2, paste0(sample_name, "_halo_pacs.csv"))
+  write_csv(halo_pacs, out_matched)
+  message(sprintf("  Matched to reference     : %d", nrow(halo_pacs)))
+  message("  Saved: ", basename(out_matched))
+
+  # Both files are consumed downstream: WF4 uses the matched subset, the KMD
+  # stage uses both (matched = "known", unmatched = "unknown").
+  stage_file(out_matched, dir_data$wf4)
+  stage_file(out_all,     dir_data$wf4)
+
+  invisible(list(all = final_output, matched = halo_pacs))
+}

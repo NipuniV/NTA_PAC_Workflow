@@ -1,0 +1,4 @@
+name,rt1_s,rt2_s,aromaticity_index,halogen_class,possible_halo_pac,matched_formula,matched_via,best_ppm_error,detected_isotope_peaks,top2_non_isotope_peaks,base_peak
+5-Chloroindole,1603,1.886,0.001593,mono_Cl,Indole-Mono-Cl,C8ClH6N,M,2.52,"151.01850 (ri=1000), 153.01567 (ri=254)","89.03829 (ri=439), 116.04872 (ri=210)",151.01850 (ri=1000)
+Peak 2256,1729,0.637,4.2e-4,poly_or_mixed; mono_Cl,Carbazole-Mono-Cl,C12ClH8N,M+4,19.6,"169.00546 (ri=852), 197.03580 (ri=515), 199.03359 (ri=123), 171.00348 (ri=111)","182.10943 (ri=1000), 123.08053 (ri=969)",182.10943 (ri=1000)
+Peak 2500,1864,1.586,-6e-6,poly_or_mixed,Fluoranthene-Di-Cl,C16Cl2H8,M+2,18.19,"267.99987 (ri=734), 269.99540 (ri=119)","149.06303 (ri=1000), 328.96297 (ri=596)",149.06303 (ri=1000)

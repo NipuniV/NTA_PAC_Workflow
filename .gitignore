@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+results_wf1/*.csv
+results_wf2/*.csv
+results_wf3/*.csv
+results_wf4/*.csv
+results_final/*.csv
+kmd_final/*.png
+logs/*.csv
+!logs/reference_library_corrections.csv
+run_all.html
+Rmarkdown/*.html
